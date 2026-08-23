@@ -1,0 +1,33 @@
+# Local data: the source dataset is intentionally not redistributed.
+data/raw/*
+data/synthetic/*.csv
+!data/raw/.gitkeep
+!data/synthetic/.gitkeep
+
+# Generated analysis artifacts.
+reports/generated/
+reports/synthetic/
+reports/robustness/
+
+# Python.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Editors and operating systems.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Model binaries are build artifacts, not source code.
+*.pkl
+*.joblib
+*.onnx

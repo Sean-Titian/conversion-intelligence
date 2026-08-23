@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "conversion-intelligence"
+version = "0.1.0"
+description = "Decision-aware conversion modeling with leakage-aware evaluation and an experimentation handoff."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Zishen Tian" }]
+dependencies = [
+  "matplotlib>=3.9,<4",
+  "numpy>=2.0,<3",
+  "pandas>=2.2,<4",
+  "scikit-learn>=1.5,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<10",
+  "ruff>=0.11,<1",
+]
+
+[project.scripts]
+conversion-train = "conversion_intelligence.train:main"
+conversion-synthesize = "conversion_intelligence.synthetic:main"
+conversion-audit = "conversion_intelligence.audit:main"
+
+[project.urls]
+Repository = "https://github.com/Sean-Titian/conversion-intelligence"
+Issues = "https://github.com/Sean-Titian/conversion-intelligence/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
