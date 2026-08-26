@@ -28,6 +28,88 @@ def test_higher_false_negative_cost_selects_no_higher_threshold() -> None:
     assert recall_weighted.threshold <= balanced.threshold
 
 
+def test_threshold_search_uses_exact_score_boundaries() -> None:
+    labels = np.array([0, 0, 1, 1])
+    probabilities = np.array([0.11, 0.22, 0.33, 0.44])
+    choice = select_cost_sensitive_threshold(
+        labels,
+        probabilities,
+        false_positive_cost=1,
+        false_negative_cost=1,
+    )
+    assert choice.threshold == 0.33
+    assert choice.selected_rows == 2
+    assert choice.selection_rate == 0.5
+
+
+def test_capacity_keeps_boundary_ties_together() -> None:
+    labels = np.array([1, 1, 0, 0])
+    probabilities = np.array([0.9, 0.8, 0.8, 0.1])
+    choice = select_cost_sensitive_threshold(
+        labels,
+        probabilities,
+        false_positive_cost=1,
+        false_negative_cost=10,
+        max_selection_fraction=0.50,
+    )
+    assert choice.threshold == 0.9
+    assert choice.selected_rows == 1
+    assert choice.max_selected_rows == 2
+    assert choice.policy_unused_capacity_rows == 1
+    assert choice.capacity_binding
+    assert choice.max_feasible_selected_rows == 1
+    assert choice.frontier_unused_capacity_rows == 1
+    assert choice.cutoff_tie_rows == 1
+    assert choice.next_infeasible_tie_rows == 2
+
+
+def test_tighter_capacity_cannot_select_more_rows() -> None:
+    labels = np.array([0, 0, 0, 1, 1, 1])
+    probabilities = np.array([0.05, 0.10, 0.20, 0.40, 0.70, 0.90])
+    loose = select_cost_sensitive_threshold(
+        labels,
+        probabilities,
+        false_positive_cost=1,
+        false_negative_cost=10,
+        max_selection_fraction=0.50,
+    )
+    tight = select_cost_sensitive_threshold(
+        labels,
+        probabilities,
+        false_positive_cost=1,
+        false_negative_cost=10,
+        max_selection_fraction=0.25,
+    )
+    assert tight.selected_rows <= loose.selected_rows
+
+
+def test_invalid_capacity_is_rejected() -> None:
+    labels = np.array([0, 1])
+    probabilities = np.array([0.1, 0.9])
+    for capacity in (0.0, -0.1, 1.1):
+        try:
+            select_cost_sensitive_threshold(
+                labels,
+                probabilities,
+                max_selection_fraction=capacity,
+            )
+        except ValueError as exc:
+            assert "max_selection_fraction" in str(exc)
+        else:
+            raise AssertionError("invalid capacity should be rejected")
+
+
+def test_non_binary_numeric_labels_are_rejected_before_integer_cast() -> None:
+    probabilities = np.array([0.1, 0.9])
+    for labels in (np.array([0.0, 0.9]), np.array([-0.1, 1.0])):
+        try:
+            select_cost_sensitive_threshold(labels, probabilities)
+        except ValueError as exc:
+            assert "binary" in str(exc)
+        else:
+            raise AssertionError("non-binary labels should be rejected")
+
+
 def test_probability_evaluation_returns_confusion_counts() -> None:
     metrics = evaluate_probabilities(
         np.array([0, 0, 1, 1]),
@@ -38,8 +120,35 @@ def test_probability_evaluation_returns_confusion_counts() -> None:
     assert metrics["false_positives"] == 1
     assert metrics["false_negatives"] == 1
     assert metrics["true_positives"] == 1
+    assert metrics["selected_rows"] == 2
+    assert metrics["selection_rate"] == 0.5
     assert "brier_score" in metrics
     assert "expected_calibration_error" in metrics
+
+
+def test_ranking_budget_records_boundary_tie_breaking() -> None:
+    metrics = evaluate_probabilities(
+        np.array([1, 0, 1, 0]),
+        np.array([0.9, 0.8, 0.8, 0.1]),
+        threshold=0.5,
+        budget_fraction=0.5,
+    )
+    assert metrics["budget_tie_break_policy"] == "stable_input_order"
+    assert metrics["budget_boundary_tie_rows"] == 2
+    assert metrics["budget_selected_from_boundary_tie"] == 1
+
+
+def test_probability_evaluation_rejects_non_binary_labels() -> None:
+    try:
+        evaluate_probabilities(
+            np.array([0.0, 0.9]),
+            np.array([0.1, 0.9]),
+            threshold=0.5,
+        )
+    except ValueError as exc:
+        assert "binary" in str(exc)
+    else:
+        raise AssertionError("non-binary labels should be rejected")
 
 
 def test_ranking_metrics_measure_top_capacity() -> None:

@@ -1,0 +1,150 @@
+{
+  "schema_version": "2.0",
+  "source_rows_after_validation": 316198,
+  "source_data_included": false,
+  "benchmark_environment": {
+    "python": "3.12.13",
+    "numpy": "2.3.2",
+    "pandas": "2.3.2",
+    "scipy": "1.18.1",
+    "scikit_learn": "1.7.2",
+    "joblib": "1.5.3",
+    "threadpoolctl": "3.6.0"
+  },
+  "model": "logistic_regression",
+  "feature_scenario": "in_session",
+  "prediction_contract": {
+    "decision_time": "session_end_in_source_data",
+    "features": [
+      "country",
+      "age",
+      "new_user",
+      "source",
+      "total_pages_visited"
+    ],
+    "deployment_status": "retrospective_upper_bound_only",
+    "limitation": "The source records final total pages, not pages observed at a timestamped intervention point. This score cannot be claimed as a real-time model without event-level data."
+  },
+  "evaluation_contract": {
+    "split": "acquisition_profile_grouped",
+    "seeds": [
+      7,
+      21,
+      42,
+      84,
+      2026
+    ],
+    "model_fit": "train_only",
+    "threshold_selection": "validation_only_exact_score_boundaries",
+    "test_use": "evaluate frozen validation-selected and reference policies on each held-out test partition",
+    "cross_seed_interpretation": "mean/min/max are split sensitivity, not confidence intervals; test rows can overlap across seeds",
+    "reference_thresholds": [
+      "fixed_0.50",
+      "C_FP/(C_FP+C_FN)_if_probabilities_are_calibrated"
+    ]
+  },
+  "primary_sensitivity_scenario": {
+    "false_positive_loss": 1.0,
+    "false_negative_loss": 4.0,
+    "loss_units": "illustrative unit loss, not measured dollars",
+    "theoretical_cost_threshold_if_calibrated": 0.2
+  },
+  "five_seed_summary": {
+    "validation_selected_threshold": {
+      "mean": 0.2084839477633127,
+      "minimum": 0.19782693404619672,
+      "maximum": 0.215875627271798
+    },
+    "validation_selected_precision": {
+      "mean": 0.6647885672311795,
+      "minimum": 0.6378586424072779,
+      "maximum": 0.6899260628465804
+    },
+    "validation_selected_recall": {
+      "mean": 0.8135591298720637,
+      "minimum": 0.7992505353319058,
+      "maximum": 0.8356883326604764
+    },
+    "validation_selected_selection_rate": {
+      "mean": 0.03889386287607542,
+      "minimum": 0.03299354605223476,
+      "maximum": 0.04861878453038674
+    },
+    "fixed_0_50_modeled_loss_per_1000": {
+      "mean": 44.12445583026393,
+      "minimum": 39.4927317691055,
+      "maximum": 51.581391624629674
+    },
+    "theoretical_threshold_modeled_loss_per_1000": {
+      "mean": 36.47142358282506,
+      "minimum": 33.05386332106882,
+      "maximum": 41.588597966210266
+    },
+    "validation_selected_modeled_loss_per_1000": {
+      "mean": 36.46655283222276,
+      "minimum": 33.08402195548585,
+      "maximum": 41.540555689006325
+    },
+    "relative_modeled_loss_reduction_vs_fixed_0_50": {
+      "mean": 0.1728633780495433,
+      "minimum": 0.1495535714285714,
+      "maximum": 0.1946600434647625
+    },
+    "relative_modeled_loss_reduction_vs_theoretical_threshold": {
+      "mean": -1.1099258910973698e-05,
+      "minimum": -0.00555812876331634,
+      "maximum": 0.003363228699551665
+    }
+  },
+  "validation_selection_ceiling_sensitivity": {
+    "ceiling": 0.05,
+    "meaning": "applied during validation threshold selection; not a hard top-K test capacity",
+    "validation_selected_threshold": {
+      "mean": 0.21314982059055992,
+      "minimum": 0.20623537411020734,
+      "maximum": 0.22115629818243301
+    },
+    "validation_selection_rate": {
+      "mean": 0.04069538001750006,
+      "minimum": 0.0322305089200644,
+      "maximum": 0.04945849090225117
+    },
+    "test_selection_rate": {
+      "mean": 0.03857048311252832,
+      "minimum": 0.03299354605223476,
+      "maximum": 0.04861878453038674
+    },
+    "relative_modeled_loss_reduction_vs_fixed_0_50": {
+      "mean": 0.17279960253933924,
+      "minimum": 0.149234693877551,
+      "maximum": 0.1946600434647625
+    },
+    "relative_modeled_loss_reduction_vs_theoretical_threshold": null,
+    "raw_descriptive_relative_change_vs_fixed_0_50": {
+      "mean": 0.17279960253933924,
+      "minimum": 0.149234693877551,
+      "maximum": 0.1946600434647625
+    },
+    "raw_descriptive_relative_change_vs_theoretical_threshold": {
+      "mean": -8.583767445655834e-05,
+      "minimum": -0.00555812876331634,
+      "maximum": 0.002989536621823742
+    },
+    "test_ceiling_diagnostics": {
+      "validation_selected_exceeded_runs": 0,
+      "fixed_0_50_exceeded_runs": 0,
+      "theoretical_cost_threshold_exceeded_runs": 1,
+      "total_runs": 5,
+      "vs_fixed_0_50_all_feasible": true,
+      "vs_theoretical_cost_threshold_all_feasible": false
+    }
+  },
+  "interpretation_limits": [
+    "The loss ratio is an explicit sensitivity assumption, not a measured business cost.",
+    "The result is modeled classification loss, not ROI, savings, or causal uplift.",
+    "The theoretical threshold is optimal only for calibrated probabilities and the stated cost matrix.",
+    "A ceiling comparison is null when either policy exceeds the test ceiling; raw descriptive changes are retained separately and are not capacity-feasible claims.",
+    "Final cumulative page views are unavailable at a verified pre-conversion decision time.",
+    "The grouped holdout uses acquisition-feature profiles because no stable user or session ID exists."
+  ]
+}

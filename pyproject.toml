@@ -12,9 +12,9 @@ license = { text = "MIT" }
 authors = [{ name = "Zishen Tian" }]
 dependencies = [
   "matplotlib>=3.9,<4",
-  "numpy>=2.0,<3",
-  "pandas>=2.2,<4",
-  "scikit-learn>=1.5,<2",
+  "numpy>=2.3.2,<2.4",
+  "pandas>=2.3.2,<2.4",
+  "scikit-learn>=1.7.2,<1.8",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +27,7 @@ dev = [
 conversion-train = "conversion_intelligence.train:main"
 conversion-synthesize = "conversion_intelligence.synthetic:main"
 conversion-audit = "conversion_intelligence.audit:main"
+conversion-decide = "conversion_intelligence.decision:main"
 
 [project.urls]
 Repository = "https://github.com/Sean-Titian/conversion-intelligence"
