@@ -24,6 +24,35 @@ The code retains `in_session` as the second scenario key for compatibility, but 
 `session_end_in_source_data`. A genuine in-session model would require timestamped page events and a
 fixed scoring cutoff, such as features known after page three or two minutes.
 
+## Point-in-time feature pipeline
+
+Version 0.2.0 turns that missing requirement into executable, **synthetic-only systems evidence**. An
+authored event contract separates sessions, score requests, and page events; a versioned Spark SQL
+query then creates one feature row per `score_id`. An event contributes only when it both occurred
+before the decision and was available to the system by then:
+
+```text
+event_at < score_at AND available_at <= score_at
+```
+
+The output includes `pages_observed_at_score_time`, observed page-category breadth, and recency.
+Identifiers and maximum event time remain audit metadata; final page totals and outcomes are never
+model features. Duplicate keys, orphan records, naive timestamps, impossible availability order,
+and score-request grain changes fail closed.
+
+The canonical local-Spark verification uses 500 synthetic sessions, 1,500 score requests, and 3,000
+page events. It excludes 500 exact-boundary event/request pairs, 5,000 future pairs, and 500
+late-arriving pairs while preserving exactly 1,500 feature rows. Spark SQL matches the Pandas
+reference row-for-row, future poison events leave every feature unchanged, and a single-request
+calculation matches its batch row. See the [aggregate verification record](reports/point-in-time-pipeline.json)
+and [full contract](docs/point-in-time-features.md).
+
+These counts test transformation behavior, not customer behavior. The pipeline does not invent
+timestamps for the restricted source table, change any source benchmark metric, establish
+distributed scale, or demonstrate an operated online feature service. This milestone does not
+train or report a new model from the synthetic point-in-time features; its feature allowlist is a
+contract for a future, prospectively labeled evaluation.
+
 ## Reality-audited results
 
 The source case contains 316,200 rows and a 3.23% conversion rate. Validation removes two impossible
@@ -152,6 +181,8 @@ out-of-time validation.
   and missing/unseen/noisy-input checks.
 - Added training–scoring schema parity tests, including reordered fields, irrelevant fields, missing
   values, and unseen categories.
+- Added a synthetic point-in-time Spark SQL/PySpark pipeline with late/future-event exclusion,
+  one-row-per-score gates, exact reference parity, and batch/single-request consistency.
 - Added a pre-registered-style [experiment handoff](docs/experiment-design.md) instead of turning
   feature importance into a causal claim.
 - Excluded raw educational data and binary model artifacts from version control.
@@ -177,8 +208,20 @@ conversion-train --data data/synthetic/conversion.csv --output reports/synthetic
 pytest
 ```
 
-To reproduce the reviewed source benchmark, use Python 3.12.13 and install the exact lock before
-the package. Then provide an authorized local copy of the source data:
+Run the optional point-in-time systems verification with Java 17 and PySpark 4.2:
+
+```bash
+python -m pip install -e ".[dev,spark]"
+conversion-pit-verify --output reports/generated/point-in-time-pipeline.json
+pytest tests/test_spark_features.py
+```
+
+The command generates its fixture in memory and writes only an aggregate report. CI keeps Spark in
+a dedicated Python 3.12 / Java 17 job instead of adding the runtime to every core test job.
+
+From a repository checkout, reproduce the reviewed source benchmark with Python 3.12.13 and the
+checked-in dependency lock before installing the package. Then provide an authorized local copy of
+the source data:
 
 ```bash
 python -m pip install -r requirements-benchmark.txt
@@ -191,19 +234,22 @@ conversion-decide --data data/raw/conversion_project.csv \
 python -m conversion_intelligence.experiment --baseline 0.0323 --relative-lift 0.10
 ```
 
-The audit report is rebuilt locally and ignored by Git. See the [data contract](data/README.md) and
-[model card](docs/model-card.md) for interpretation boundaries.
+This restricted-source workflow and `requirements-benchmark.txt` are repository-only audit
+materials, not installed-package interfaces. The rebuilt audit report remains local and ignored by
+Git. See the [data contract](data/README.md) and [model card](docs/model-card.md) for interpretation
+boundaries.
 
 ## Repository map
 
 ```text
 .
 ├── src/conversion_intelligence/   # validation, models, audit, power, CLI
-├── tests/                         # contracts, parity, metrics, and split tests
-├── docs/                          # experiment design and model card
+│   └── sql/                       # versioned point-in-time Spark SQL
+├── tests/                         # contracts, engine parity, metrics, and safety gates
+├── docs/                          # model, experiment, and feature-timing contracts
 ├── data/                          # contract and ignored local inputs
-├── reports/                       # reproducible, ignored generated outputs
-└── .github/workflows/ci.yml       # lint and test gate
+├── reports/                       # reviewed aggregates; generated detail stays ignored
+└── .github/workflows/ci.yml       # core matrix plus dedicated Spark parity gate
 ```
 
 ## What the data cannot establish
@@ -214,9 +260,11 @@ The audit report is rebuilt locally and ignored by Git. See the [data contract](
 - No intervention assignment: prediction and association do not estimate incremental lift.
 - Undocumented redistribution terms: the original data is not included.
 
-The next credible increment is better data, not a more complex classifier: log user/session IDs,
-feature event times, score time, intervention exposure, delayed outcomes, and guardrails. Only then
-does it make sense to add production serving, monitoring, or model-registry machinery.
+For a real deployment, the next credible increment remains better observed data—not a more complex
+classifier. The synthetic pipeline demonstrates the required contract but cannot replace logging
+real user/session IDs, feature event and availability times, score time, intervention exposure,
+delayed outcomes, and guardrails. Only then does it make sense to evaluate production serving,
+monitoring, or model-registry machinery.
 
 ## Portfolio context and license
 

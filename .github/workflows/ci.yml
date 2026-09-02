@@ -29,3 +29,64 @@ jobs:
         run: ruff check .
       - name: Test
         run: pytest
+      - name: Build package
+        run: python -m build
+      - name: Verify source distribution notices
+        run: >-
+          python -c "import glob, tarfile;
+          paths = glob.glob('dist/*.tar.gz');
+          assert len(paths) == 1;
+          archive = tarfile.open(paths[0]);
+          names = archive.getnames();
+          archive.close();
+          assert any(name.endswith('/THIRD_PARTY_NOTICES.md') for name in names)"
+      - name: Install and smoke-test wheel
+        run: >-
+          python -m pip install --force-reinstall --no-deps dist/*.whl &&
+          python -c "from importlib.metadata import distribution;
+          from conversion_intelligence import __version__;
+          from conversion_intelligence.point_in_time import load_point_in_time_sql;
+          assert __version__ == '0.2.0';
+          assert 'available_at_us <=' in load_point_in_time_sql();
+          assert any(path.name == 'THIRD_PARTY_NOTICES.md'
+          for path in distribution('conversion-intelligence').files)"
+
+  spark-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install package with Spark verification dependencies
+        run: python -m pip install -e ".[dev,spark]"
+      - name: Lint
+        run: ruff check .
+      - name: Test Spark SQL parity
+        run: pytest tests/test_spark_features.py
+      - name: Verify packaged SQL resource
+        run: python -m build
+      - name: Verify source distribution notices
+        run: >-
+          python -c "import glob, tarfile;
+          paths = glob.glob('dist/*.tar.gz');
+          assert len(paths) == 1;
+          archive = tarfile.open(paths[0]);
+          names = archive.getnames();
+          archive.close();
+          assert any(name.endswith('/THIRD_PARTY_NOTICES.md') for name in names)"
+      - name: Install and smoke-test wheel
+        run: >-
+          python -m pip install --force-reinstall --no-deps dist/*.whl &&
+          python -c "from importlib.metadata import distribution;
+          from conversion_intelligence import __version__;
+          from conversion_intelligence.point_in_time import load_point_in_time_sql;
+          assert __version__ == '0.2.0';
+          assert 'available_at_us <=' in load_point_in_time_sql();
+          assert any(path.name == 'THIRD_PARTY_NOTICES.md'
+          for path in distribution('conversion-intelligence').files)"

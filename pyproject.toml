@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=75", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "conversion-intelligence"
-version = "0.1.0"
+version = "0.2.0"
 description = "Decision-aware conversion modeling with leakage-aware evaluation and an experimentation handoff."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Zishen Tian" }]
 dependencies = [
   "matplotlib>=3.9,<4",
@@ -19,8 +20,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "build>=1.2,<2",
   "pytest>=8.3,<10",
   "ruff>=0.11,<1",
+]
+spark = [
+  "pyspark==4.2.0",
 ]
 
 [project.scripts]
@@ -28,6 +33,7 @@ conversion-train = "conversion_intelligence.train:main"
 conversion-synthesize = "conversion_intelligence.synthetic:main"
 conversion-audit = "conversion_intelligence.audit:main"
 conversion-decide = "conversion_intelligence.decision:main"
+conversion-pit-verify = "conversion_intelligence.spark_features:main"
 
 [project.urls]
 Repository = "https://github.com/Sean-Titian/conversion-intelligence"
@@ -35,6 +41,9 @@ Issues = "https://github.com/Sean-Titian/conversion-intelligence/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+conversion_intelligence = ["sql/*.sql"]
 
 [tool.pytest.ini_options]
 addopts = "-q"

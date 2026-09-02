@@ -1,0 +1,48 @@
+{
+  "artifact_type": "synthetic_point_in_time_pipeline_verification",
+  "claim_boundary": "Synthetic transformation evidence only; source metrics are unchanged and this does not establish production scale, online serving, or real-world performance.",
+  "config": {
+    "page_events_per_session": 6,
+    "score_requests_per_session": 3,
+    "seed": 20260901,
+    "sessions": 500,
+    "users": 250
+  },
+  "contract": {
+    "analysis_unit": "one row per score_id",
+    "availability_rule": "available_at <= score_at",
+    "event_time_rule": "event_at < score_at",
+    "outcome_fields_in_features": false
+  },
+  "counts": {
+    "candidate_event_score_pairs": 9000,
+    "eligible_event_score_pairs": 3000,
+    "exact_availability_boundary_pairs_included": 500,
+    "exact_score_boundary_pairs_excluded": 500,
+    "future_event_score_pairs_excluded": 5000,
+    "late_event_score_pairs_excluded": 500,
+    "output_rows": 1500,
+    "page_event_rows": 3000,
+    "score_request_rows": 1500,
+    "session_rows": 500,
+    "zero_history_score_requests": 500
+  },
+  "data_classification": "synthetic",
+  "engine": {
+    "query_sha256": "43ec052e4f9f61c2a446184e7233931c3dd4426fce38afdb38944a9e0fc878f0",
+    "spark_sql_timezone": "UTC",
+    "spark_version": "4.2.0"
+  },
+  "gates": {
+    "batch_single_request_exact_parity": true,
+    "exact_availability_boundary_included": true,
+    "exact_score_boundary_excluded": true,
+    "future_events_excluded": true,
+    "future_poison_invariance": true,
+    "late_events_excluded": true,
+    "one_row_per_score_request": true,
+    "spark_sql_reference_exact_parity": true
+  },
+  "report_scope": "aggregate_only",
+  "schema_version": "1.0"
+}

@@ -24,3 +24,8 @@ generation environment, and interpretation limits without exposing source rows. 
 is extracted by code from the full local report; the full cost/selection-ceiling sweep remains
 ignored under `generated/`. Install `requirements-benchmark.txt` for the exact reviewed splitter
 environment before regenerating source results.
+
+`point-in-time-pipeline.json` is independent synthetic systems evidence. It records only fixture
+sizes, event/request exclusion counts, engine metadata, and pass/fail gates for Spark SQL/reference,
+future-poison, one-row-per-request, and batch/single-request parity. It contains no source-derived
+rows or metrics and does not claim production scale or online serving.

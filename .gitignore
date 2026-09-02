@@ -1,13 +1,61 @@
-# Local data: the source dataset is intentionally not redistributed.
+# Local data: source and generated tables are intentionally not redistributed.
 data/raw/*
-data/synthetic/*.csv
+data/synthetic/*
 !data/raw/.gitkeep
 !data/synthetic/.gitkeep
+
+# Tabular, database, and event-log outputs. Public examples are generated at
+# runtime; aggregate JSON reports remain reviewable source artifacts.
+*.csv
+*.tsv
+*.xls
+*.xlsx
+*.parquet
+*.orc
+*.avro
+*.feather
+*.arrow
+*.jsonl
+*.ndjson
+*.duckdb
+*.db
+*.sqlite
+*.sqlite3
+
+# Archives, notebooks, office documents, videos, and vendored runtimes are not
+# source artifacts for this repository.
+*.7z
+*.gz
+*.ipynb
+*.jar
+*.pdf
+*.docx
+*.pptx
+*.tar
+*.tgz
+*.zip
+*.avi
+*.mkv
+*.mov
+*.mp4
+*.webm
 
 # Generated analysis artifacts.
 reports/generated/
 reports/synthetic/
 reports/robustness/
+
+# Spark local-mode state and distributed output shards.
+spark-warehouse/
+metastore_db/
+.sparkStaging/
+checkpoints/
+checkpoint/
+derby.log
+**/_temporary/
+**/_SUCCESS
+**/*.crc
+**/part-*
 
 # Python.
 __pycache__/
@@ -19,6 +67,30 @@ __pycache__/
 htmlcov/
 .venv/
 venv/
+build/
+dist/
+
+# Secrets and machine-local configuration.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+credentials.json
+secrets.json
+.aws/
+
+# Local work products.
+.local/
+.cache/
+.ipynb_checkpoints/
+tmp/
+temp/
+*.log
 
 # Editors and operating systems.
 .idea/
@@ -27,7 +99,18 @@ venv/
 Thumbs.db
 Desktop.ini
 
-# Model binaries are build artifacts, not source code.
+# Model binaries and fitted directories are build artifacts, not source code.
+artifacts/
+models/
+mlruns/
+mlartifacts/
 *.pkl
+*.pickle
 *.joblib
 *.onnx
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.keras
+*.safetensors
