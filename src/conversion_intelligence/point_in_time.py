@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from .event_contract import ValidatedPointInTimeInputs
+from .schema import require_unique_column_names
 
 OUTPUT_COLUMNS = (
     "score_id",
@@ -73,6 +74,7 @@ def load_point_in_time_sql() -> str:
 def canonicalize_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
     """Validate and normalize engine output to declared canonical contract types."""
 
+    require_unique_column_names(frame.columns, context="Point-in-time feature output")
     missing = sorted(set(OUTPUT_COLUMNS) - set(frame.columns))
     unexpected = sorted(set(frame.columns) - set(OUTPUT_COLUMNS))
     if missing or unexpected:

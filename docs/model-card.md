@@ -28,6 +28,12 @@ ROC-AUC is supplementary. Precision and recall are evaluated at a threshold sele
 data using explicit costs. `conversion-audit` adds five split seeds, a row-bootstrap interval, exact
 profile holdout, label permutation, and input corruption. The bootstrap is not dependence-aware.
 
+Package 0.2.1 embeds the scoring schema projector as the first fitted pipeline step. Fit and direct
+prediction therefore share feature allowlisting, column order, duplicate-name rejection, and
+finite/integer domain checks. Controlled-fixture tests also check input immutability and exact
+probability parity after an in-memory serialization round trip. This is not evidence of a deployed
+service, cross-language serving parity, or online feature freshness.
+
 `conversion-decide` performs the policy analysis separately from model benchmarking. It fits on
 train partitions, searches every distinct validation-score boundary, freezes the selected cutoff,
 and compares it with both a fixed 0.50 convention and the theoretical calibrated-probability cost

@@ -6,6 +6,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from .schema import require_unique_column_names
+
 REQUIRED_COLUMNS = (
     "country",
     "age",
@@ -31,6 +33,18 @@ class DataQualityReport:
 
 def load_conversion_data(path: str | Path) -> tuple[pd.DataFrame, DataQualityReport]:
     """Load and validate a conversion dataset without mutating the source file."""
+
+    raw_header = pd.read_csv(
+        path,
+        header=None,
+        nrows=1,
+        dtype="string",
+        keep_default_na=False,
+    )
+    require_unique_column_names(
+        raw_header.iloc[0].tolist(),
+        context="Training CSV header",
+    )
     frame = pd.read_csv(path)
     return validate_conversion_data(frame)
 
@@ -41,13 +55,23 @@ def validate_conversion_data(
     minimum_age: int = 13,
     maximum_age: int = 100,
 ) -> tuple[pd.DataFrame, DataQualityReport]:
+    require_unique_column_names(frame.columns, context="Training data")
     missing = sorted(set(REQUIRED_COLUMNS) - set(frame.columns))
     if missing:
         raise ValueError(f"Missing required columns: {', '.join(missing)}")
 
     data = frame.loc[:, REQUIRED_COLUMNS].copy()
     for column in ("age", "new_user", "total_pages_visited", "converted"):
-        data[column] = pd.to_numeric(data[column], errors="raise")
+        if column in {"age", "total_pages_visited"}:
+            boolean_values = data[column].map(
+                lambda value: isinstance(value, (bool, np.bool_))
+            )
+            if boolean_values.any():
+                raise ValueError(f"{column} must not contain boolean values")
+        converted = pd.to_numeric(data[column], errors="raise")
+        if np.iscomplexobj(converted.to_numpy()):
+            raise ValueError(f"{column} must contain real values")
+        data[column] = converted
 
     for column in ("new_user", "converted"):
         values = set(data[column].dropna().unique())

@@ -48,6 +48,142 @@ def test_scoring_contract_uses_imputer_compatible_missing_categories() -> None:
     assert prepared["country"].dtype == object
 
 
+@pytest.mark.parametrize(
+    ("scenario", "column"),
+    [
+        ("acquisition", "age"),
+        ("acquisition", "new_user"),
+        ("in_session", "total_pages_visited"),
+    ],
+)
+def test_scoring_contract_allows_missing_numeric_values_for_fitted_imputation(
+    scenario: str,
+    column: str,
+) -> None:
+    frame = pd.DataFrame(
+        {
+            "country": ["US"],
+            "age": [31],
+            "new_user": [1],
+            "source": ["Seo"],
+            "total_pages_visited": [3],
+        }
+    )
+    frame.loc[0, column] = None
+
+    prepared = prepare_feature_frame(frame, scenario)
+
+    assert pd.isna(prepared.loc[0, column])
+
+
+@pytest.mark.parametrize(
+    ("scenario", "column"),
+    [
+        ("acquisition", "country"),
+        ("acquisition", "age"),
+        ("in_session", "total_pages_visited"),
+    ],
+)
+def test_scoring_contract_rejects_duplicate_required_columns(
+    scenario: str,
+    column: str,
+) -> None:
+    frame = pd.DataFrame(
+        {
+            "country": ["US"],
+            "age": [31],
+            "new_user": [1],
+            "source": ["Seo"],
+            "total_pages_visited": [3],
+        }
+    )
+    duplicated = pd.concat([frame, frame[[column]]], axis=1)
+
+    with pytest.raises(
+        ValueError,
+        match=r"Scoring request has duplicate column names; count=2",
+    ):
+        prepare_feature_frame(duplicated, scenario)
+
+
+def test_scoring_contract_rejects_duplicate_irrelevant_metadata_columns() -> None:
+    frame = pd.DataFrame(
+        {
+            "country": ["US"],
+            "age": [31],
+            "new_user": [1],
+            "source": ["Seo"],
+            "trace": ["a"],
+        }
+    )
+    duplicated = pd.concat([frame, frame[["trace"]]], axis=1)
+
+    with pytest.raises(ValueError, match=r"duplicate column names; count=2"):
+        prepare_feature_frame(duplicated, "acquisition")
+
+
+@pytest.mark.parametrize(
+    ("scenario", "column", "value", "message"),
+    [
+        ("acquisition", "age", 31.5, "whole numbers"),
+        ("acquisition", "age", float("inf"), "finite"),
+        ("in_session", "total_pages_visited", 3.5, "whole numbers"),
+        ("in_session", "total_pages_visited", float("inf"), "finite"),
+        ("in_session", "total_pages_visited", float("-inf"), "finite"),
+        ("acquisition", "age", 31 + 1j, "real numbers"),
+        ("acquisition", "new_user", 1 + 0j, "real numbers"),
+        ("in_session", "total_pages_visited", 3 + 1j, "real numbers"),
+    ],
+)
+def test_scoring_contract_rejects_nonfinite_or_fractional_integer_features(
+    scenario: str,
+    column: str,
+    value: complex | float,
+    message: str,
+) -> None:
+    frame = pd.DataFrame(
+        {
+            "country": ["US"],
+            "age": [31],
+            "new_user": [1],
+            "source": ["Seo"],
+            "total_pages_visited": [3],
+        }
+    )
+    frame[column] = frame[column].astype(complex if isinstance(value, complex) else float)
+    frame.loc[0, column] = value
+
+    with pytest.raises(ValueError, match=message):
+        prepare_feature_frame(frame, scenario)
+
+
+@pytest.mark.parametrize(
+    ("scenario", "column"),
+    [
+        ("acquisition", "age"),
+        ("in_session", "total_pages_visited"),
+    ],
+)
+def test_scoring_contract_rejects_boolean_integer_features(
+    scenario: str,
+    column: str,
+) -> None:
+    frame = pd.DataFrame(
+        {
+            "country": ["US"],
+            "age": [31],
+            "new_user": [1],
+            "source": ["Seo"],
+            "total_pages_visited": [3],
+        }
+    )
+    frame[column] = frame[column].astype(object)
+    frame.loc[0, column] = True
+
+    with pytest.raises(ValueError, match=rf"{column} scoring values must not be boolean"):
+        prepare_feature_frame(frame, scenario)
+
+
 def test_scoring_contract_rejects_missing_or_invalid_required_values() -> None:
     frame = pd.DataFrame(
         {"country": ["US"], "age": [31], "new_user": [1], "source": ["Seo"]}

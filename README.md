@@ -53,6 +53,27 @@ distributed scale, or demonstrate an operated online feature service. This miles
 train or report a new model from the synthetic point-in-time features; its feature allowlist is a
 contract for a future, prospectively labeled evaluation.
 
+## Fail-closed training–scoring schema
+
+Package 0.2.1 is a contract-integrity patch; it changes no source benchmark, model algorithm,
+split, decision rule, or performance metric. The three source-data commands now inspect the raw
+CSV header before pandas can suffix duplicate names, then reject duplicate columns again on the
+in-memory training frame. This prevents an ambiguous feature or label column from being silently
+discarded by allowlist projection.
+
+The fitted scikit-learn pipeline now begins with the same schema projector used by the scoring
+helper. Both fit and direct `predict_proba` calls therefore reject duplicate columns, non-finite
+known numeric values, and fractional age/page counts before preprocessing. Required features are
+returned in canonical training order; unique request metadata is ignored, while missing values and
+unknown categories remain supported by the fitted imputers and encoder. The point-in-time output
+canonicalizer applies the same duplicate-name gate.
+
+Tests cover reordered fields, harmless metadata, target/final-page poison fields, missing and
+unknown categories, duplicate raw CSV headers, duplicate in-memory fields, domain violations,
+input immutability, and an in-memory serialize/reload probability check. This is deterministic
+schema/preprocessing consistency on controlled fixtures—not proof of an online feature service,
+production train–serve parity, or real-world performance.
+
 ## Reality-audited results
 
 The source case contains 316,200 rows and a 3.23% conversion rate. Validation removes two impossible
@@ -179,8 +200,9 @@ out-of-time validation.
   and cost-ratio sensitivity.
 - Added five-seed evaluation, iid bootstrap intervals, exact-profile holdout, label permutation,
   and missing/unseen/noisy-input checks.
-- Added training–scoring schema parity tests, including reordered fields, irrelevant fields, missing
-  values, and unseen categories.
+- Embedded a fail-closed schema projector in model fit and prediction, including raw-header and
+  duplicate-column guards, finite/integer domain checks, canonical ordering, safe metadata
+  exclusion, missing/unseen handling, and in-memory reload parity.
 - Added a synthetic point-in-time Spark SQL/PySpark pipeline with late/future-event exclusion,
   one-row-per-score gates, exact reference parity, and batch/single-request consistency.
 - Added a pre-registered-style [experiment handoff](docs/experiment-design.md) instead of turning

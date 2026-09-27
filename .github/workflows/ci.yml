@@ -46,7 +46,7 @@ jobs:
           python -c "from importlib.metadata import distribution;
           from conversion_intelligence import __version__;
           from conversion_intelligence.point_in_time import load_point_in_time_sql;
-          assert __version__ == '0.2.0';
+          assert __version__ == '0.2.1';
           assert 'available_at_us <=' in load_point_in_time_sql();
           assert any(path.name == 'THIRD_PARTY_NOTICES.md'
           for path in distribution('conversion-intelligence').files)"
@@ -86,7 +86,7 @@ jobs:
           python -c "from importlib.metadata import distribution;
           from conversion_intelligence import __version__;
           from conversion_intelligence.point_in_time import load_point_in_time_sql;
-          assert __version__ == '0.2.0';
+          assert __version__ == '0.2.1';
           assert 'available_at_us <=' in load_point_in_time_sql();
           assert any(path.name == 'THIRD_PARTY_NOTICES.md'
           for path in distribution('conversion-intelligence').files)"

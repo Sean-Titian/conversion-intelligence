@@ -20,7 +20,8 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from .features import CATEGORICAL_FEATURES
+from .features import CATEGORICAL_FEATURES, FeatureContractTransformer
+from .schema import require_unique_column_names
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,9 @@ class ThresholdChoice:
 
 
 def build_model_pipeline(feature_names: tuple[str, ...], model_name: str) -> Pipeline:
+    if not feature_names:
+        raise ValueError("Model feature contract must contain at least one feature")
+    require_unique_column_names(feature_names, context="Model feature contract")
     categorical = [name for name in feature_names if name in CATEGORICAL_FEATURES]
     numeric = [name for name in feature_names if name not in CATEGORICAL_FEATURES]
 
@@ -86,7 +90,13 @@ def build_model_pipeline(feature_names: tuple[str, ...], model_name: str) -> Pip
     else:
         raise ValueError(f"Unknown model: {model_name}")
 
-    return Pipeline(steps=[("preprocess", preprocessing), ("model", estimator)])
+    return Pipeline(
+        steps=[
+            ("schema", FeatureContractTransformer(feature_names)),
+            ("preprocess", preprocessing),
+            ("model", estimator),
+        ]
+    )
 
 
 def _validated_binary_scores(

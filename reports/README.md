@@ -29,3 +29,7 @@ environment before regenerating source results.
 sizes, event/request exclusion counts, engine metadata, and pass/fail gates for Spark SQL/reference,
 future-poison, one-row-per-request, and batch/single-request parity. It contains no source-derived
 rows or metrics and does not claim production scale or online serving.
+
+Package 0.2.1 hardens source, scoring, fitted-pipeline, and point-in-time output schemas. It does not
+change or regenerate the three tracked evidence records or any reported metric; estimator
+algorithms, split logic, decision rules, and point-in-time transformations are unchanged.

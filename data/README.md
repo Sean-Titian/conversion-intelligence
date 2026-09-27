@@ -17,6 +17,21 @@ Expected columns:
 | `total_pages_visited` | integer | Final pages viewed in the completed session | session end in this source |
 | `converted` | binary | Purchase completed in the session | outcome |
 
+## Fail-closed schema rules
+
+The source-compatible loader accepts unique extra metadata columns but projects only the six
+required fields above, in this canonical order. Before pandas parses the table normally, the loader
+reads the raw CSV header as data and rejects any repeated name; it then repeats the duplicate-name
+check on the in-memory frame. This avoids pandas suffixing an ambiguous header and the pipeline
+silently selecting only one copy. Error messages report counts, never row values.
+
+Training requires finite whole-number `age` and `total_pages_visited` values and binary
+`new_user`/`converted` values. Scoring applies the same finite/integer domain to known non-missing
+values and embeds the feature projection inside the fitted model pipeline. Scoring can still accept
+missing values for fitted imputation, unknown categories for the one-hot encoder, reordered fields,
+and unique request metadata. Duplicate names anywhere in a training, scoring, or point-in-time
+output schema fail closed.
+
 The timing distinction is deliberate: `total_pages_visited` is unavailable for an acquisition-time
 score and is also a proxy for latent purchase intent. Because the source has no page-event timestamps,
 the full-feature result is reported only as a retrospective upper bound. A real-time model needs a

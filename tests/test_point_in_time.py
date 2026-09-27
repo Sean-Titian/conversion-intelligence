@@ -13,6 +13,7 @@ from conversion_intelligence.point_in_time import (
     MODEL_FEATURE_COLUMNS,
     OUTPUT_COLUMNS,
     build_reference_features,
+    canonicalize_feature_frame,
     load_point_in_time_sql,
 )
 from conversion_intelligence.spark_features import (
@@ -50,6 +51,20 @@ def test_reference_features_respect_boundary_availability_and_grain() -> None:
     assert result.audit.exact_availability_boundary_pairs_included == 2
     assert result.audit.late_event_score_pairs_excluded == 2
     assert result.audit.zero_history_score_requests == 2
+
+
+def test_feature_output_rejects_duplicate_column_names() -> None:
+    _, result = _build_reference(sessions=1)
+    duplicated = pd.concat(
+        [result.features, result.features[["country"]]],
+        axis=1,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"Point-in-time feature output has duplicate column names; count=2",
+    ):
+        canonicalize_feature_frame(duplicated)
 
 
 def test_reference_features_are_invariant_to_future_poison_event() -> None:

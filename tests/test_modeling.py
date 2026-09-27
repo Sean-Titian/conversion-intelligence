@@ -1,5 +1,8 @@
+import pickle
+
 import numpy as np
 import pandas as pd
+import pytest
 
 from conversion_intelligence.features import prepare_feature_frame
 from conversion_intelligence.modeling import (
@@ -175,6 +178,7 @@ def test_training_and_scoring_column_order_have_prediction_parity() -> None:
     labels = np.array([0, 1, 0, 0, 1, 1])
     model = build_model_pipeline(tuple(train.columns), "logistic_regression")
     model.fit(train, labels)
+    assert len(model[:-1].get_feature_names_out()) > len(train.columns)
     request = train[["source", "new_user", "age", "country"]].copy()
     request["ignored"] = "safe"
     prepared = prepare_feature_frame(request, "acquisition")
@@ -185,3 +189,86 @@ def test_training_and_scoring_column_order_have_prediction_parity() -> None:
     degraded_request.loc[1, "source"] = None
     degraded = prepare_feature_frame(degraded_request, "acquisition")
     assert model.predict_proba(degraded).shape == (len(degraded), 2)
+
+
+def test_model_pipeline_rejects_empty_or_duplicate_feature_contracts() -> None:
+    with pytest.raises(ValueError, match="at least one feature"):
+        build_model_pipeline((), "logistic_regression")
+    with pytest.raises(
+        ValueError,
+        match=r"Model feature contract has duplicate column names; count=2",
+    ):
+        build_model_pipeline(("country", "country", "age"), "logistic_regression")
+
+
+def test_embedded_schema_contract_survives_reload_and_blocks_bypass() -> None:
+    train = pd.DataFrame(
+        {
+            "country": ["US", "UK", "US", "China", "UK", "China"],
+            "age": [24, 33, 41, 28, 36, 52],
+            "new_user": [1, 0, 1, 1, 0, 0],
+            "source": ["Ads", "Seo", "Direct", "Ads", "Direct", "Seo"],
+        }
+    )
+    labels = np.array([0, 1, 0, 0, 1, 1])
+    model = build_model_pipeline(tuple(train.columns), "logistic_regression")
+    model.fit(train, labels)
+
+    request = train[["source", "new_user", "age", "country"]].copy()
+    request.loc[0, "country"] = "Atlantis"
+    request.loc[1, "source"] = None
+    request["converted"] = 0
+    request["total_pages_visited"] = 1
+    before = request.copy(deep=True)
+
+    direct = model.predict_proba(request)
+    manual = model.predict_proba(prepare_feature_frame(request, "acquisition"))
+    np.testing.assert_allclose(direct, manual, rtol=0.0, atol=0.0)
+    pd.testing.assert_frame_equal(request, before)
+
+    poisoned = request.copy()
+    poisoned["converted"] = 1
+    poisoned["total_pages_visited"] = 10_000
+    np.testing.assert_allclose(
+        direct,
+        model.predict_proba(poisoned),
+        rtol=0.0,
+        atol=0.0,
+    )
+
+    restored = pickle.loads(pickle.dumps(model))
+    np.testing.assert_allclose(
+        direct,
+        restored.predict_proba(request),
+        rtol=0.0,
+        atol=0.0,
+    )
+
+    duplicate_request = pd.concat([request, request[["age"]]], axis=1)
+    with pytest.raises(ValueError, match=r"duplicate column names; count=2"):
+        restored.predict_proba(duplicate_request)
+
+    fractional_request = request.copy()
+    fractional_request["age"] = 31.5
+    with pytest.raises(ValueError, match="whole numbers"):
+        restored.predict_proba(fractional_request)
+
+
+def test_embedded_schema_rejects_boolean_page_count_on_direct_prediction() -> None:
+    train = pd.DataFrame(
+        {
+            "country": ["US", "UK", "US", "China", "UK", "China"],
+            "age": [24, 33, 41, 28, 36, 52],
+            "new_user": [1, 0, 1, 1, 0, 0],
+            "source": ["Ads", "Seo", "Direct", "Ads", "Direct", "Seo"],
+            "total_pages_visited": [1, 8, 2, 3, 7, 9],
+        }
+    )
+    labels = np.array([0, 1, 0, 0, 1, 1])
+    model = build_model_pipeline(tuple(train.columns), "logistic_regression")
+    model.fit(train, labels)
+    request = train.iloc[[0]].copy()
+    request["total_pages_visited"] = True
+
+    with pytest.raises(ValueError, match="must not be boolean"):
+        model.predict_proba(request)
