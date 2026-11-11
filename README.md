@@ -55,7 +55,7 @@ contract for a future, prospectively labeled evaluation.
 
 ## Fail-closed training–scoring schema
 
-Package 0.2.1 is a contract-integrity patch; it changes no source benchmark, model algorithm,
+Package 0.2.1 introduced a contract-integrity patch; it changed no source benchmark, model algorithm,
 split, decision rule, or performance metric. The three source-data commands now inspect the raw
 CSV header before pandas can suffix duplicate names, then reject duplicate columns again on the
 in-memory training frame. This prevents an ambiguous feature or label column from being silently
@@ -73,6 +73,22 @@ unknown categories, duplicate raw CSV headers, duplicate in-memory fields, domai
 input immutability, and an in-memory serialize/reload probability check. This is deterministic
 schema/preprocessing consistency on controlled fixtures—not proof of an online feature service,
 production train–serve parity, or real-world performance.
+
+### Point-in-time output integrity (0.2.2)
+
+Engine agreement is not enough if both engines return the same impossible row. The shared output
+canonicalizer now also rejects out-of-domain age/user status, negative counts or elapsed time,
+more observed categories than pages, and inconsistent history fields. Zero pages requires zero
+categories and null event-time/recency fields; positive history requires both fields and at least
+one category. Recency must equal the integer-second floor of the score/event timestamp difference
+and cannot exceed session elapsed time. A valid subsecond history may have recency zero, and valid
+pre-epoch timestamps remain supported.
+
+This patch changes only output validation and its regression tests, not the SQL transformation,
+model, split, decision policy, or any of the three tracked aggregate reports. Tests run the same
+contract from source and the installed wheel. These checks establish internal feature consistency
+on synthetic fixtures; they cannot prove input provenance, event availability, online freshness,
+or an improvement in model performance.
 
 ## Reality-audited results
 

@@ -92,6 +92,31 @@ none of the session's feature rows change. This is evidence of engine parity and
 row-context invariance at the transformation boundary—not train/serve parity or evidence that an
 online feature service has been built or operated.
 
+### Output semantic invariants
+
+The shared canonicalizer validates more than engine agreement. From package 0.2.2, every output
+must also satisfy:
+
+- age is 13–100 and `new_user` is 0 or 1;
+- session elapsed seconds, observed pages, and distinct categories are non-negative integers;
+- categories never exceed pages; positive page history has at least one category;
+- zero pages means zero categories and null `feature_max_event_at_us` and recency; positive
+  history requires both nullable fields to be present;
+- the maximum eligible event precedes the score, and recency equals
+  `(score_at_us - feature_max_event_at_us) // 1_000_000` without integer overflow;
+- recency is non-negative and cannot exceed session elapsed seconds.
+
+Elapsed seconds and recency are floored, not rounded. A valid event less than one second before
+the score therefore has recency zero, even when session elapsed seconds is also zero. Epoch
+microseconds may be negative for valid dates before 1970; they are not elapsed durations. A request
+with zero observable history can still have a positive session duration.
+
+These are necessary internal-consistency checks, not reconstruction of the event log. The output
+does not retain exact session start or every `available_at`, so output validation alone cannot
+prove the event cutoff, arrival cutoff, or source provenance. The input contract, versioned query,
+and synthetic poison/parity tests remain separate gates. The 0.2.2 patch changes none of those
+transformations or existing aggregate report bytes.
+
 ## Isolation from the source benchmark
 
 This workflow is synthetic-only. The educational source table has no event timestamps, availability

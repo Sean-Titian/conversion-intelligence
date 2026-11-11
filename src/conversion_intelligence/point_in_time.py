@@ -71,8 +71,55 @@ def load_point_in_time_sql() -> str:
     )
 
 
+def _validate_feature_values(frame: pd.DataFrame) -> None:
+    """Reject impossible values and history combinations after type normalization."""
+
+    pages = frame["pages_observed_at_score_time"]
+    categories = frame["unique_page_categories_observed"]
+    elapsed = frame["seconds_since_session_start"]
+    event_time = frame["feature_max_event_at_us"]
+    recency = frame["seconds_since_last_page_view"]
+    zero_history = pages.eq(0)
+    checks = (
+        ("age must be between 13 and 100", ~frame["age"].between(13, 100)),
+        ("new_user must be binary", ~frame["new_user"].isin([0, 1])),
+        ("seconds_since_session_start must be non-negative", elapsed.lt(0)),
+        ("pages_observed_at_score_time must be non-negative", pages.lt(0)),
+        ("unique_page_categories_observed must be non-negative", categories.lt(0)),
+        ("Observed categories must not exceed pages", categories.gt(pages)),
+        ("Positive page history requires observed categories", pages.gt(0) & categories.eq(0)),
+        (
+            "Page history requires consistent nullable event-time and recency fields",
+            zero_history.ne(event_time.isna()) | zero_history.ne(recency.isna()),
+        ),
+        ("seconds_since_last_page_view must be non-negative", recency.lt(0)),
+        ("Page recency must not exceed session elapsed time", recency.gt(elapsed)),
+    )
+    for message, invalid in checks:
+        count = int(invalid.fillna(False).sum())
+        if count:
+            raise ValueError(f"{message}; count={count}")
+
+    # Absolute epoch times may be negative. Subtract Python integers so valid
+    # int64 endpoints cannot wrap before the duration is floored to seconds.
+    expected_recency = pd.Series(
+        [
+            pd.NA if pd.isna(event) else (int(score) - int(event)) // 1_000_000
+            for score, event in zip(frame["score_at_us"], event_time, strict=True)
+        ],
+        index=frame.index,
+        dtype="Int64",
+    )
+    inconsistent = recency.ne(expected_recency).fillna(False)
+    if inconsistent.any():
+        raise ValueError(
+            "Page recency must match the floored score/event time difference; "
+            f"count={int(inconsistent.sum())}"
+        )
+
+
 def canonicalize_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
-    """Validate and normalize engine output to declared canonical contract types."""
+    """Normalize engine output and validate types, domains, and history consistency."""
 
     require_unique_column_names(frame.columns, context="Point-in-time feature output")
     missing = sorted(set(OUTPUT_COLUMNS) - set(frame.columns))
@@ -139,6 +186,7 @@ def canonicalize_feature_frame(frame: pd.DataFrame) -> pd.DataFrame:
         raise ValueError("Feature output contains duplicate score_id rows")
     if (result["feature_max_event_at_us"] >= result["score_at_us"]).fillna(False).any():
         raise ValueError("Feature output contains an event at or after score time")
+    _validate_feature_values(result)
     if set(result.columns).intersection({"converted", "outcome", "outcome_at"}):
         raise ValueError("Feature output must not contain outcome fields")
     return result
