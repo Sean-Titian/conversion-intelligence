@@ -192,8 +192,30 @@ This is an honest audit of an **offline classification decision rule**. The cost
 weights—not dollars, ROI, or causal conversion lift. Even switching the acquisition-time model from
 0.50 to a cost-aware rule reduces modeled loss by only about 0.8%, so the data does not support a
 strong deployable pre-session policy. A production decision would require measured action costs,
-incremental treatment response, a separate top-K rule for hard capacity, and prospective or
-out-of-time validation.
+incremental treatment response, and prospective or out-of-time validation. Package 0.3.0 now
+provides the separate top-K batch rule below; it does not supply the missing business evidence.
+
+### Hard batch capacity is a separate decision contract (0.3.0)
+
+A validation selection-rate ceiling is not a hard quota on a new batch: a score shift can push
+more rows above the frozen threshold. `conversion_intelligence.capacity.select_top_k` instead
+accepts only completed scores, unique opaque scoring-request keys, and an integer capacity K.
+It returns a boolean mask aligned to the input and never selects more than K requests in that
+single batch. It uses no outcome labels and does not learn or alter a model threshold.
+
+Equal scores are ordered by a versioned SHA-256 key digest, with raw UTF-8 key bytes as a collision
+fallback. Reordering the same input batch therefore preserves the selected key set. With no
+`minimum_score`, the rule fills `min(K, batch size)`, even if every score is zero. A caller-frozen,
+inclusive minimum score permits unused capacity. Empty batches and zero capacity are valid;
+missing/non-finite scores, malformed or duplicate keys, and invalid K fail before selection.
+
+See the [executable example and capacity contract](docs/batch-capacity.md). Regression tests cover
+ties, forced digest collisions, row permutations, score shift, eligibility boundaries, and a
+synthetic fitted-pipeline handoff, from source and an installed wheel. The existing ranking
+benchmark still uses its disclosed stable-input-order ties; no source keys are invented and all
+three tracked aggregate reports remain byte-identical. This new API is a mechanical, request-level
+batch constraint—not user-level deduplication, a global/concurrent queue quota, economic optimality,
+fairness, experiment randomization, or causal conversion lift. No new performance metric is claimed.
 
 ## Product recommendation
 

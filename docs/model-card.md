@@ -60,5 +60,10 @@ about a 0.8% mean reduction, so it does not support a strong deployment claim.
   randomized intervention data, it cannot identify who would convert because of an action.
 - The 4:1 loss ratio and 5%/10% validation selection ceilings are explicit sensitivity assumptions,
   not measured business inputs or hard operational quotas.
+- The separate package 0.3.0 `select_top_k` utility enforces capacity for one already-scored request
+  batch only. It does not change this model or its existing benchmark, deduplicate users, coordinate
+  concurrent batches, optimize economic value, or estimate intervention effects. Its key digest
+  is a deterministic tie rule, not anonymization or experiment randomization. See the
+  [batch-capacity contract](batch-capacity.md).
 - Demographic and geographic features require fairness review before operational use.
 - Aggregate educational data cannot substitute for a production data contract, monitoring, and incident response.
