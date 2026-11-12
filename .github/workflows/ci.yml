@@ -46,14 +46,14 @@ jobs:
           python -c "from importlib.metadata import distribution;
           from conversion_intelligence import __version__;
           from conversion_intelligence.point_in_time import load_point_in_time_sql;
-          assert __version__ == '0.3.0';
+          assert __version__ == '0.3.1';
           assert 'available_at_us <=' in load_point_in_time_sql();
           assert any(path.name == 'THIRD_PARTY_NOTICES.md'
           for path in distribution('conversion-intelligence').files)"
-      - name: Verify installed-wheel output and capacity contracts
+      - name: Verify installed-wheel output, capacity, and planning contracts
         run: >-
           python -m pytest -o pythonpath= --import-mode=importlib
-          tests/test_point_in_time_output_contract.py tests/test_capacity.py
+          tests/test_point_in_time_output_contract.py tests/test_capacity.py tests/test_experiment.py
 
   spark-parity:
     runs-on: ubuntu-latest
@@ -90,7 +90,7 @@ jobs:
           python -c "from importlib.metadata import distribution;
           from conversion_intelligence import __version__;
           from conversion_intelligence.point_in_time import load_point_in_time_sql;
-          assert __version__ == '0.3.0';
+          assert __version__ == '0.3.1';
           assert 'available_at_us <=' in load_point_in_time_sql();
           assert any(path.name == 'THIRD_PARTY_NOTICES.md'
           for path in distribution('conversion-intelligence').files)"

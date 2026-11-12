@@ -223,10 +223,22 @@ fairness, experiment randomization, or causal conversion lift. No new performanc
   do not automate consequential decisions from demographic or geographic attributes.
 - Do not present the 0.986 ROC-AUC as the headline deployment result. Use it as evidence that final
   engagement is associated with conversion and as motivation to collect timestamped behavioral data.
-- Test a specific intervention—such as a recommendation module—with random assignment. At a 3.23%
-  baseline, 10% relative lift, 80% power, and 5% attrition, the planning approximation is **51,893
-  users per arm**.
+- Test a specific intervention—such as a recommendation module—with independent user assignment.
+  The planning command reproduces **51,893 independent units per arm** only under illustrative
+  assumptions: baseline 3.23%, target relative difference 10%, target power 80%, two-sided alpha
+  5%, and enrollment inflation for 5% attrition. The source's 3.23% is a **session** conversion
+  rate, not an observed seven-day **user** baseline; this is not a verified user sample requirement
+  or attained-power claim. A matched pre-experiment baseline and complete outcome window are still
+  required. See the [assignment-origin experiment handoff](docs/experiment-design.md).
 - Monitor calibration, performance by segment, latency, refunds, and opt-outs before expanding use.
+
+Package 0.3.1 corrects that handoff's unit and clock: all assigned users remain in ITT, with a fixed
+seven-day window starting at assignment, not first render or click. No-render, repeated-session,
+and immature/missing-outcome cases are explicitly distinguished. The planning CLI now labels its
+inputs as assumptions and its output as approximate enrollment of independent units; invalid or
+numerically unsupported inputs fail clearly. This is a design/communication correction, not an
+implemented randomization service or a new causal/model result. Model metrics, capacity policy,
+SQL, and the three tracked aggregate reports are unchanged.
 
 ## What was improved
 
